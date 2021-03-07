@@ -282,7 +282,7 @@ def timenow():
 #Exits program upon clicking Exit button
 def Exitf():
     #arduino.write(b'0')
-    arduino.close()
+    #arduino.close()
     os._exit(0)
     quit()
 	
