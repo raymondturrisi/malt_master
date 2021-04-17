@@ -515,7 +515,7 @@ gs_motor, k_flap, gate_valve, g_jogger = 0, 0, 0, 0 # 0 or 1, 0 or 1, 0 or 1, 0-
 o2_valve, filling, misting, draining = 0, 0, 0, 0 # 0 or 1, 0 or 1, 0 or 1, 0 or 1
 
 def manControlPage():
-    global h, w, pageNum, window, combox_General_home
+    global h, w, pageNum, window, combox_General_home, updateArduino
     global mode, manMode_button, purge_button, kiln_heater_button, kiln_motor_button
 
     global gs_motor_button, kiln_flap_button, o2_button
@@ -552,6 +552,7 @@ def manControlPage():
     ###Manual mode sequence
     def man_ctl():
         global mode, manMode_button
+        updateArduino = True
         if(mode == 0):
             mode = 1
             manMode_button.configure(text="True")
@@ -591,7 +592,8 @@ def manControlPage():
 
     def kiln_heater_ctl():
         #changes kiln heater variable, only when in manual mode
-        global mode, k_heating, kiln_heater_button
+        global mode, k_heating, kiln_heater_button, updateArduino
+        updateArduino = True
         if(mode == 1):
             if(k_heating == 0):
                 k_heating = 1
@@ -612,7 +614,8 @@ def manControlPage():
     ##Kiln fan
     def kf_ctl():
         #changes gate valve variable, only when in manual mode
-        global mode, k_fan, kiln_fan_button
+        global mode, k_fan, kiln_fan_button, updateArduino
+        updateArduino = True
         if(mode == 1):
             k_fan = kiln_fan_slider.get()
             print(f"Kiln Fan: {k_fan}")
@@ -634,7 +637,8 @@ def manControlPage():
 
     def kiln_motor_ctl():
         #changes kiln motor variable, only when in manual mode
-        global mode, k_motor, kiln_motor_button
+        global mode, k_motor, kiln_motor_button, updateArduino
+        updateArduino = True
         if(mode == 1):
             if(k_motor == 0):
                 k_motor = 1
@@ -655,7 +659,8 @@ def manControlPage():
     ##GS motor
     def gs_motor_ctl():
         #changes gs motor variable, only when in manual mode
-        global mode, gs_motor, gs_motor_button
+        global mode, gs_motor, gs_motor_button, updateArduino
+        updateArduino = True
         if(mode == 1):
             if(gs_motor == 0):
                 gs_motor = 1
@@ -677,7 +682,8 @@ def manControlPage():
     kiln_flap_button = tk.Button()
     def kiln_flap_ctl():
         #changes kiln flap variable, only when in manual mode
-        global mode, k_flap, kiln_flap_button
+        global mode, k_flap, kiln_flap_button, updateArduino
+        updateArduino = True
         if(mode == 1):
             if(k_flap == 0):
                 k_flap = 1
@@ -698,7 +704,8 @@ def manControlPage():
     ##Gate valve
     def gate_ctl():
         #changes gate valve variable, only when in manual mode
-        global mode, gate_valve, gate_button
+        global mode, gate_valve, gate_button, updateArduino
+        updateArduino = True
         if(mode == 1):
             if(gate_valve == 0):
                 gate_valve = 1
@@ -720,7 +727,8 @@ def manControlPage():
 
     def gj_ctl():
         #changes gate valve variable, only when in manual mode
-        global mode, g_jogger, gj_button
+        global mode, g_jogger, gj_button, updateArduino
+        updateArduino = True
         if(mode == 1):
             g_jogger = gj_slider.get()
             print(f"GJ: {g_jogger}")
@@ -740,7 +748,8 @@ def manControlPage():
 
     ##o2 valve
     def o2_ctl():
-        global mode, o2_valve, o2_button
+        global mode, o2_valve, o2_button, updateArduino
+        updateArduino = True
         if(mode == 1):
             if(o2_valve == 0):
                 o2_valve = 1
@@ -761,7 +770,8 @@ def manControlPage():
     ##Flood valve
     def fill_ctl():
         #changes fill valve variable, only when in manual mode
-        global mode, filling, fill_button
+        global mode, filling, fill_button, updateArduino
+        updateArduino = True
         if(mode == 1):
             if(filling == 0):
                 filling = 1
@@ -781,7 +791,8 @@ def manControlPage():
 
     ##Mister
     def mister_ctl():
-        global mode, misting, mist_button
+        global mode, misting, mist_button, updateArduino
+        updateArduino = True
         if(mode == 1):
             if(misting == 0):
                 misting = 1
@@ -802,7 +813,8 @@ def manControlPage():
     ##Drain
     def drain_ctl():
         #changes drain valve variable, only when in manual mode
-        global mode, draining, drain_button
+        global mode, draining, drain_button, updateArduino
+        updateArduino = True
         if(mode == 1):
             if(draining == 0):
                 draining = 1
@@ -823,6 +835,7 @@ def manControlPage():
 
 def goManControl():
     global pageNum, window
+    updateArduino = True
     for widget in window.winfo_children():
         widget.destroy()
     pageNum = 4
@@ -838,7 +851,7 @@ def timenow():
     return time.perf_counter()
 
 ############################################
-    
+
 #Exits program upon clicking Exit button
 def Exitf():
     #arduino.write(b'0')
@@ -846,9 +859,92 @@ def Exitf():
     os._exit(0)
     quit()
 
+#Opens arduino and provides info to user
+def openArduino():
+    global arduino
+    print(f"IDLE Awaiting input & Confirmation")
+    print("Available ports: \n---------------")
+    ports = serial.tools.list_ports.comports()
+    for port, desc, hwid in sorted(ports):
+        print("{}: {}".format(port, desc))
+    print('---------------\n')
+    print("Please choose COM port for Arduino (i.e. \"COM4\")")
+    port = input("Port = ")
+    try :
+        arduino = serial.Serial(port,9600)
+        print(f"Opened port: {arduino.name:s}")
+        time.sleep(2)
+    except :
+        print(f"Could not open \nrequested port ({port:s})")
+
+def updatePlots():
+    pass
+
+def updateMonitor():
+    pass
+
+def buildMessage():
+    global updateArduino
+    if(updateArduino):
+        message = f"{k_heating},{k_fan},{k_motor},{gs_motor},{k_flap},{gate_valve},{g_jogger},{o2_valve},{filling},{misting},{draining}"
+        #arduino.write(message.encode("utf-8"))
+        print(message.encode("utf-8"))
+        updateArduino = False
+
+m_type, k_temp_now, k_hum_now, gs_temp_now, gs_wh_now, gs_wl_now = 0,0,0,0,0,0
+
+def wh2wl(dist2top):
+    #piece wise function for curvature of silo
+    #linear at the top half
+    #sloped at the bottom half, gauged from physical measurements
+    height = 50
+    corner = 35 #cm, need to update constant
+    if(dist2top <= corner):
+        return ((corner-dist2top)*(0.5)+15) #gallons, need to update constant (volume per cm)
+    else:
+        return (1/3)*(3.145)*(0.57735)*(height-(dist2top-corner))^3 #gallons, need to update constants, volume of cone
+
+arduino = serial.Serial()
+
+def getMessage():
+    #type, ktemp, khum, gstemp, gswl
+    global arduino, m_type, k_temp_now, k_hum_now, gs_temp_now, gs_wl_now
+    while(arduino.in_waiting > 0):
+        serialString = arduino.readline()
+        serialString = serialString.decode('Ascii')
+        parsed_string = serialString.split(",")
+        m_type = int(parsed_string[0])
+        k_temp_now = float(parsed_string[1])
+        k_hum_now = float(parsed_string[2])
+        gs_temp_now = float(parsed_string[3])
+        gs_wh_now = float(parsed_string[4])
+        gs_wl_now = wh2wl(gs_hl_now)
+
+        for i in range(len(parsed_string)):
+            print(parsed_string[i])
+
+def stateManagement():
+    pass
+
+def main():
+    global queue
+    
+    #updating plots
+    updatePlots()
+    updateMonitor()
+    #building messages if arduino needs to be updated
+    buildMessage()
+    #reading messages from arduino if they're in line, updating variables
+    #getMessage()
+    #state_management
+    stateManagement()
+
 
 homePage()
+#openArduino() #Opens the arduino
+#serialString = arduino.readline() #prevents crash from left over bits in bus
 while True:
-    #main() #main loop
+    main() #main loop
+    #print(updateArduino)
     window.update_idletasks()
     window.update()
