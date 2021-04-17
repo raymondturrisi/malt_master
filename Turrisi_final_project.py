@@ -64,12 +64,12 @@ monitor = tk.Text()
 
 #Reading from arduino
 button_on_board = 0
-a_read = 0;
+a_read = 0
 
 #Timers and global flags
 inc_time_monitor = 0.00
 ahead_simulator_time = 0
-ahead_time_processmgr = 0;
+ahead_time_processmgr = 0
 buttonPressFlag = False
 
 
@@ -318,7 +318,7 @@ def echoInfo():
         print(f"Echoed : {serialString:s}")
 
 ############################################
-        
+
 #Updates the monitor on the home page
 def updateMonitor():
     global monitor, queue, inc_time_monitor, pageNum, combox_General_home
