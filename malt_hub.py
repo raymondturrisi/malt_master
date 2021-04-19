@@ -10,6 +10,7 @@
 
 import math as m
 import serial
+#from serial import Serial
 import time as time
 import tkinter as tk
 from matplotlib.figure import Figure 
@@ -17,7 +18,7 @@ from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
 NavigationToolbar2Tk) 
 import os
 import serial.tools.list_ports
-
+import queue
 
 ############################################
 ########   WINDOW CONSTRUCTION   ###########
@@ -33,8 +34,6 @@ fontSize = int(16*h/500)
 window = tk.Tk()
 window.title("Malt Master - Hub")
 window.geometry(f'{w}x{h}')
-
-
 
 ############################################
 ##############   Variables   ###############
@@ -102,7 +101,10 @@ class job:
         #export data as a csv to be opened in sheets software
         pass
 
-queue = []
+queue = [] #max queue size is 1 for now, when the GS is done, the parameters are loaded and the object is destroyed
+
+gs_busy, kiln_busy = 0,0
+
 updateArduino = False
 ##Input variables
 
@@ -115,7 +117,7 @@ pageNum = 0
 def homePage():
     global h, w, pageNum, window, combox_General_home, kilnInfo, gsInfo
     page = tk.Frame(window)
-
+    window.configure(bg = "light goldenrod yellow")
     #Header
     combox_header = tk.Label(fg = "black", bg = "white", text = "Home Page", width = int(0.01*w), height = int(0.002*h), font = ('Helvetica',fontSize), anchor = "nw")
     combox_header.place(x =0.025*w, y = 0.025*h)
@@ -378,17 +380,23 @@ def addJobPage():
     rc_frq_entry.delete(0,'end')
 
 
-    def buildJob():
-        global queue, combox_General_home
+    def buildJob(self):
+        global queue, combox_General_home, gs_busy
         try:
-            queue.append(job(name_tmp.get(),gs_wash_time_tmp.get(), gs_wash_tumble_tmp.get(), 
-                gs_wash_tumble_dur_tmp.get(),gs_wash_water_tmp.get(),gs_wash_cycles_tmp.get(),
-                gs_steep_time_tmp.get(), gs_steep_tumbles_tmp.get(), gs_steep_water_tmp.get(), gs_steep_o2_tmp.get(), 
-                gs_germ_time_tmp.get(), gs_germ_water_tmp.get(), gs_germ_tumble_tmp.get(), gs_germ_o2_tmp.get(), 
-                kn_time_tmp.get(), kn_tumbles_tmp.get(),kn_temp_tmp.get(), kn_fan_speed_tmp.get(), rc_frq_tmp.get()))
+            if(not(gs_busy)):
+                queue.append(job(name_tmp.get(),gs_wash_time_tmp.get(), gs_wash_tumble_tmp.get(), 
+                    gs_wash_tumble_dur_tmp.get(),gs_wash_water_tmp.get(),gs_wash_cycles_tmp.get(),
+                    gs_steep_time_tmp.get(), gs_steep_tumbles_tmp.get(), gs_steep_water_tmp.get(), gs_steep_o2_tmp.get(), 
+                    gs_germ_time_tmp.get(), gs_germ_water_tmp.get(), gs_germ_tumble_tmp.get(), gs_germ_o2_tmp.get(), 
+                    kn_time_tmp.get(), kn_tumbles_tmp.get(),kn_temp_tmp.get(), kn_fan_speed_tmp.get(), rc_frq_tmp.get()))
+            else:
+                 print("GS is busy and new job cannot be loaded right now")
+
         except ValueError:
+            print("There is a problem with one of your inputs, everything must be whole integers")
             pass
         else:
+            print("There is an unaccounted for problem, goodluck..")
             pass
 
         name_entry.delete(0,'end')
@@ -413,7 +421,7 @@ def addJobPage():
         print(queue[0].name)
 
     #Exit button binded too escape key (on some computers)
-    buildJob_Button = tk.Button(window, text = "Build Job", command = buildJob, font = ('Helvetica',fontSize))
+    buildJob_Button = tk.Button(window, text = "Start Job", command = buildJob, font = ('Helvetica',fontSize))
     buildJob_Button.place(x=0.05*w,y=0.85*h)
     buildJob_Button.bind('<Enter>', buildJob)
 
@@ -512,11 +520,11 @@ mode = 0 # 0 = normal operation, 1 = manual control, 2 = purging
 #variables
 k_heating, k_fan, k_motor = 0, 0, 0 # 0 or 1, 0 - 255, 0 or 1 respectively
 gs_motor, k_flap, gate_valve, g_jogger = 0, 0, 0, 0 # 0 or 1, 0 or 1, 0 or 1, 0-255
-o2_valve, filling, misting, draining = 0, 0, 0, 0 # 0 or 1, 0 or 1, 0 or 1, 0 or 1
+o2_valve, filling, misting, draining, filtering = 0, 0, 0, 0, 0 # 0 or 1, 0 or 1, 0 or 1, 0 or 1
 
 def manControlPage():
     global h, w, pageNum, window, combox_General_home, updateArduino
-    global mode, manMode_button, purge_button, kiln_heater_button, kiln_motor_button
+    global mode, manMode_button, purge_button, kiln_heater_button, kiln_motor_button, filter_button
 
     global gs_motor_button, kiln_flap_button, o2_button
     global fill_button, gate_button, mist_button, drain_button
@@ -665,7 +673,7 @@ def manControlPage():
             if(gs_motor == 0):
                 gs_motor = 1
                 gs_motor_button.configure(text="On")
-            elif(k_motor == 1):
+            elif(gs_motor == 1):
                 gs_motor = 0
                 gs_motor_button.configure(text="Off")
             print(f"GS motor: {gs_motor}")
@@ -832,6 +840,27 @@ def manControlPage():
     drain_button = tk.Button(window, text = ("Open" if draining else "Closed"), command = drain_ctl, font = ('Helvetica',int(fontSize*0.8)))
     drain_button.place(x=0.55*w,y=0.34*h)
 
+    ##Filter
+    def filter_ctl():
+        #changes filter variable, only when in manual mode
+        global mode, filtering, filter_button, updateArduino
+        updateArduino = True
+        if(mode == 1):
+            if(filtering == 0):
+                filtering = 1
+                filter_button.configure(text="On")
+            elif(filtering == 1):
+                filtering = 0
+                filter_button.configure(text="Off")
+            print(f"Filtering: {filtering}")
+        else:
+            print(f"Filtering: {filtering}")
+
+    filter_label = tk.Label(fg = "black", bg = "white", text = "Filter: ", width = int(0.01*w), font = ('Helvetica',int(fontSize*0.9)), anchor = "nw")
+    filter_label.place(x =0.39*w, y = 0.42*h)
+
+    filter_button = tk.Button(window, text = ("On" if filtering else "Off"), command = filter_ctl, font = ('Helvetica',int(fontSize*0.8)))
+    filter_button.place(x=0.55*w,y=0.41*h)
 
 def goManControl():
     global pageNum, window
@@ -851,6 +880,8 @@ def timenow():
     return time.perf_counter()
 
 ############################################
+arduino = serial.Serial()
+
 
 #Exits program upon clicking Exit button
 def Exitf():
@@ -868,14 +899,15 @@ def openArduino():
     for port, desc, hwid in sorted(ports):
         print("{}: {}".format(port, desc))
     print('---------------\n')
-    print("Please choose COM port for Arduino (i.e. \"COM4\")")
-    port = input("Port = ")
+    #print("Please choose COM port for Arduino (i.e. \"COM4\")")
+    #port = input("Port = ")
     try :
-        arduino = serial.Serial(port,9600)
+        arduino = serial.Serial("/dev/ttyACM0",115200)
         print(f"Opened port: {arduino.name:s}")
         time.sleep(2)
     except :
-        print(f"Could not open \nrequested port ({port:s})")
+        pass
+        #print(f"Could not open \nrequested port ({port:s})")
 
 def updatePlots():
     pass
@@ -886,7 +918,7 @@ def updateMonitor():
 def buildMessage():
     global updateArduino
     if(updateArduino):
-        message = f"{k_heating},{k_fan},{k_motor},{gs_motor},{k_flap},{gate_valve},{g_jogger},{o2_valve},{filling},{misting},{draining}"
+        message = f"{k_heating},{k_fan},{k_motor},{gs_motor},{k_flap},{gate_valve},{g_jogger},{o2_valve},{filling},{misting},{draining},{filtering}\n"
         #arduino.write(message.encode("utf-8"))
         print(message.encode("utf-8"))
         updateArduino = False
@@ -904,7 +936,6 @@ def wh2wl(dist2top):
     else:
         return (1/3)*(3.145)*(0.57735)*(height-(dist2top-corner))^3 #gallons, need to update constants, volume of cone
 
-arduino = serial.Serial()
 
 def getMessage():
     #type, ktemp, khum, gstemp, gswl
@@ -912,18 +943,365 @@ def getMessage():
     while(arduino.in_waiting > 0):
         serialString = arduino.readline()
         serialString = serialString.decode('Ascii')
-        parsed_string = serialString.split(",")
-        m_type = int(parsed_string[0])
-        k_temp_now = float(parsed_string[1])
-        k_hum_now = float(parsed_string[2])
-        gs_temp_now = float(parsed_string[3])
-        gs_wh_now = float(parsed_string[4])
-        gs_wl_now = wh2wl(gs_hl_now)
+        print(serialString)
+        #parsed_string = serialString.split(",")
+        #m_type = int(parsed_string[0])
+        #k_temp_now = float(parsed_string[1])
+        #k_hum_now = float(parsed_string[2])
+        #gs_temp_now = float(parsed_string[3])
+        #gs_wh_now = float(parsed_string[4])
+        #gs_wl_now = wh2wl(gs_hl_now)
 
-        for i in range(len(parsed_string)):
-            print(parsed_string[i])
+        #for i in range(len(parsed_string)):
+            #print(parsed_string[i])
+
+
+current_job = job("arb", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+c_step_time_r = 0
+gs_busy, wash_sequence, steep_sequence, germ_sequence = False, False, False, False
+steeping, steep_1, steep_2, steep_3 = False, False, False, False
+germ_1, germ_2, germ_3 = False, False, False
+kiln_1, kiln_2, kiln_3 = False, False, False
+gj_1, gj_2 = False, False
+gj_sequence, kiln_sequence, entry_flagged, first_mix, gs_mixing = False,False,False,False, False
+gs_start_time, fill_start_time, first_mix_time, gj_start_time, kiln_start_time, last_mix, drain_start, next_o2_release = 0,0,0,0,0,0,0,0
+o2_interval, o2_duration, next_o2_release, o2_opened_at = 0.00, 0.00, 0.00, 0.00
+steep_start_time = 0
 
 def stateManagement():
+    global current_job, queue
+    global steeping, steep_1, steep_2, steep_3, steep_start_time
+    global germ_1, germ_2, germ_3
+    global kiln_1, kiln_2, kiln_3
+    global gj_1, gj_2, gj_start_time
+    global gs_busy, wash_sequence, steep_sequence, germ_sequence
+    global gs_start_time, fill_start_time, first_mix_time, last_mix, drain_start, next_o2_release
+    global filling, updateArduino, gs_wl_now, gs_motor, draining, filtering, o2_valve, k_motor, k_fan
+    global gj_sequence, kiln_sequence, entry_flagged, first_mix, gs_mixing
+    global o2_interval, o2_duration, next_o2_release, o2_opened_at
+    #if not purging, system is doing nothing, or processing job (mode == 1)
+        #if a job is received, start process, gs is busy
+    if(mode == 0):
+        #update buttons, combox, etc
+        #start wash sequence if there is a job and there are no problems
+        if(len(queue) == 1 and not(gs_busy)):
+            current_job = queue.pop(0)
+            gs_busy = True
+            wash_sequence = True
+            gs_start_time = timenow()
+            print("started")
+        if(wash_sequence):
+            if(current_job.wash_cycles > 0):
+                #fill with water until water level is reached, or a time has allotted (safety)
+                if(not(filling) and not(entry_flagged)):
+                    fill_start_time = timenow()
+                    filling = 1
+                    updateArduino = True 
+                    entry_flagged = True
+                    print(f"filling {timenow()}")
+                    print(current_job.wash_cycles)
+                if(filling):
+                    gs_wl_now = 25 #delete
+                    if(timenow() >= (fill_start_time + 5)):
+                        filling = 0 
+                        gs_mixing = True
+                        updateArduino = True 
+                        first_mix = True
+                        print(f"not filling {timenow()}")
+                #when water is filled, stir for n time in one minute intervals (save the motor), filter is on
+                if(gs_mixing):
+                    if(first_mix):
+                        last_mix = timenow()
+                        first_mix = False 
+                        first_mix_time = timenow()
+                        gs_motor = 1
+                        filtering = 1
+                        updateArduino = True
+                        print(f"first mix {timenow()}")
+                    if(not(first_mix)):
+                        if(last_mix + 5 <= timenow()):
+                            if(gs_motor):
+                                gs_motor = 0
+                            else:
+                                gs_motor = 1
+                            last_mix = timenow()
+                            updateArduino = True
+                            print(f"mixing {timenow()}")
+                    if(current_job.wash_time*10 <= (timenow()-first_mix_time)):
+                        #oh the pain of non-blocking code
+                        draining = 1
+                        gs_motor = 1
+                        last_mix = 0
+                        filtering = 0
+                        first_mix = True
+                        gs_mixing = False 
+                        updateArduino = True
+                        drain_start = timenow()
+                        print(f"wash done {timenow()}")
+                #when n time is reached, filter is off, system is draining and mixing
+                
+                if(draining and (drain_start + 5) <= timenow()):
+                    draining = 0
+                    gs_motor = 0
+                    current_job.wash_cycles = current_job.wash_cycles - 1
+                    updateArduino = True
+                    entry_flagged = False
+                    print(f"drained {timenow()}")
+                    print(current_job.wash_cycles)
+                    #when system is drained (initial height pm 5 cm), repeats the above step for c cycles
+            else:
+                print(f"washing done {timenow()}")
+                wash_sequence = False
+                steep_sequence = True
+                steep_1 = True
+                gs_busy = False
+                entry_flagged = False
+
+        #start steep sequence
+            #steeps for n time, agitating periodically, adding o2 periodically
+        if(steep_sequence):
+            ##starting the steep sequence
+            if(steep_1):
+                if(not(filling) and not(entry_flagged) and not(steeping)):
+                        fill_start_time = timenow()
+                        filling = 1
+                        updateArduino = True 
+                        entry_flagged = True
+                        print(f"filling {timenow()}")
+                ##filling 
+                if(filling):
+                    if(timenow() >= (fill_start_time + 5)):
+                        filling = 0 
+                        steeping = True
+                        updateArduino = True 
+                        print(f"not filling {timenow()}")
+                ##steeping
+                if(steeping and entry_flagged):
+                    steep_start_time = timenow()
+                    next_o2_release = timenow()
+                    o2_interval = current_job.steep_time*(current_job.steep_o2/100)
+                    o2_duration = o2_interval*current_job.steep_o2/100
+                    entry_flagged = False
+                    steep_1 = False
+                    steep_2 = True
+                    print(f"start steeping {timenow()}")
+                    print(f"{o2_interval}")
+                    print(f"{o2_duration}")
+
+            if(steep_2):
+                ##periodically releasing o2
+
+                if(next_o2_release <= timenow()):
+                    o2_opened_at = timenow()
+                    o2_valve = 1
+                    next_o2_release = next_o2_release+o2_interval
+                    updateArduino = True
+                    print(f"opened {timenow()}")
+                if(o2_opened_at + o2_duration <= timenow() and o2_valve == 1):
+                    print(f"closed {timenow()}")
+                    o2_valve = 0
+                    updateArduino = True
+
+                ##periodically mixing
+                if(last_mix + 5 <= timenow()):
+                    if(gs_motor):
+                        gs_motor = 0
+                    else:
+                        gs_motor = 1
+                    last_mix = timenow()
+                    updateArduino = True
+                    print(f"mixing {timenow()}")
+
+                ##ending statement
+                if(current_job.steep_time*3*1 <= timenow() - steep_start_time):
+                    steeping = False
+                    entry_flagged = True
+                    o2_valve = 0
+                    draining = 1
+                    gs_motor = 1
+                    drain_start = timenow() 
+                    print(f"draining {timenow()}")
+                    updateArduino = True
+                    steep_2 = False
+                    steep_3 = True
+
+            if(steep_3):
+                #done steeping
+                if(draining and (drain_start + 5) <= timenow()):
+                    draining = 0
+                    gs_motor = 0
+                    updateArduino = True
+                    steep_3 = False
+                    entry_flagged = False
+                    germ_1 = True
+                    steep_sequence = False
+                    germ_sequence = True
+                    print(f"drained {timenow()}")
+                    
+
+        #start germinating sequence
+            #germing for n time
+                #mist periodically
+                #tumble periodically
+        if(germ_sequence):
+            ##starting the steep sequence
+            if(germ_1):
+                germ_start_time = timenow()
+
+                next_o2_release = timenow()
+                o2_interval = current_job.germ_time*(current_job.germ_o2/100)
+                o2_duration = o2_interval*current_job.germ_o2/100
+                next_mist_release = timenow()
+                mist_interval = current_job.germ_time*(current_job.germ_o2/100)
+                mist_duration = mist_interval*current_job.germ_mist/100
+
+                entry_flagged = False
+                germ_1 = False
+                germ_2 = True
+                print(f"start germinating {timenow()}")
+                print(f"{o2_interval}")
+                print(f"{o2_duration}")
+                print(f"{mist_interval}")
+                print(f"{mist_duration}")
+
+            if(germ_2):
+                ##periodically releasing o2
+
+                if(next_o2_release <= timenow()):
+                    o2_opened_at = timenow()
+                    o2_valve = 1
+                    next_o2_release = next_o2_release+o2_interval
+                    updateArduino = True
+                    print(f"opened {timenow()}")
+                if(o2_opened_at + o2_duration <= timenow() and o2_valve == 1):
+                    print(f"closed {timenow()}")
+                    o2_valve = 0
+                    updateArduino = True
+
+                ##periodically misting
+                if(next_o2_release <= timenow()):
+                    o2_opened_at = timenow()
+                    o2_valve = 1
+                    next_o2_release = next_o2_release+o2_interval
+                    updateArduino = True
+                    print(f"opened {timenow()}")
+                if(o2_opened_at + o2_duration <= timenow() and o2_valve == 1):
+                    print(f"closed {timenow()}")
+                    o2_valve = 0
+                    updateArduino = True
+
+
+                ##periodically mixing
+                if(last_mix + 5 <= timenow()):
+                    if(gs_motor):
+                        gs_motor = 0
+                    else:
+                        gs_motor = 1
+                    last_mix = timenow()
+                    updateArduino = True
+                    print(f"mixing {timenow()}")
+
+                ##ending statement
+                if(current_job.germ_time*3*1 <= timenow() - steep_start_time):
+                    o2_valve = 0
+                    gs_motor = 1
+                    drain_start = timenow() 
+                    print(f"last tumbling {timenow()}")
+                    updateArduino = True
+                    germ_2 = False
+                    germ_3 = True
+                    last_mix = timenow()
+
+            if(germ_3):
+                #done germing
+                if(timenow() >= last_mix + 20):
+                    gs_motor = 0
+                    updateArduino = True
+                    gj_1 = True
+                    germ_3 = False
+                    germ_sequence = False
+                    gj_sequence = True
+
+                    print(f"done germing {timenow()}")
+                    
+        #transport grain for (2 minutes?)
+            #gs is not busy
+        if(gj_sequence):
+            if(gj_1):
+                #setup this mode
+                gj_start_time = timenow()
+                g_jogger = 255
+                gate_valve = 1
+                gs_motor = 1
+                k_motor = 1
+                updateArduino = True
+                gj_1 = False
+                gj_2 = True
+                print(f"beginning grain transport {timenow()}")
+            if(gj_2):
+                #transport the grain while spinning the kiln motor
+                if(timenow() >= gj_start_time + 10):
+                    g_jogger = 0
+                    gate_valve = 0
+                    gs_motor = 0
+                    k_motor = 0
+                    updateArduino = True
+                    gj_2 = False
+                    kiln_1 = True
+                    gj_sequence = False
+                    kiln_sequence = True
+                    print(f"done transporting {timenow()}")
+        #start kiln process
+            #kilns for n time, with heating element on when temperature is not at desired temperature, with fan at set fan speed
+                #heater turns off if temperature is not met within 30 minutes, defaulting to 100 degrees and 40 pwm fan speed
+            #finish kilning
+            if(kiln_sequence):
+                #throw heaters
+                if(kiln_1):
+                    kiln_start_time = timenow()
+                    last_mix = timenow()
+                    k_fan = current_job.kiln_fan
+                    k_heating = 1
+                    kiln_1 = False 
+                    kiln_2 = True
+                    updateArduino = True 
+                    print(f"starting kiln process {timenow()}")
+                #mix periodically
+                if(kiln_2):
+                    if(timenow() >= last_mix + 10):
+                        last_mix = timenow()
+                        k_motor = 1
+                        updateArduino = True
+                    if(k_motor == 1 and timenow() >= last_mix+5):
+                        last_mix = timenow()
+                        k_motor = 0
+                        updateArduino = True
+                    #exit code: push grain out
+                    if(current_job.kiln_time <= timenow()-kiln_start_time):
+                        last_mix = timenow()
+                        k_fan = 0
+                        k_heating = 0
+                        k_motor = 1
+                        k_flap = 1
+                        updateArduino = True
+                        kiln_2 = False 
+                        kiln_3 = True
+                        print(f"finished kilning {timenow()}")
+                #once grain is assumed to have been gone, clode kiln and reset
+                if(kiln_3):
+                    if(timenow() >= last_mix + 10):
+                        k_motor = 0
+                        k_flap = 0
+                        updateArduino = True
+                        kiln_3 = False
+                        kiln_sequence = False
+                        print(f"kiln reset {timenow()}")
+
+    #if purging, purge
+        pass
+    if(mode == 2):
+        #purge sequence
+        pass
     pass
 
 def main():
@@ -932,13 +1310,15 @@ def main():
     #updating plots
     updatePlots()
     updateMonitor()
+
     #building messages if arduino needs to be updated
     buildMessage()
+
     #reading messages from arduino if they're in line, updating variables
     #getMessage()
+
     #state_management
     stateManagement()
-
 
 homePage()
 #openArduino() #Opens the arduino
