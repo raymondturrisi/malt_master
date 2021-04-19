@@ -292,7 +292,7 @@ def addJobPage():
     gs_steep_water_entry.place(x =0.58*w, y = 0.55*h)
 
     ##O2 for steeping
-    gs_steep_o2_entryLabel = tk.Label(fg = "black", bg = "white", text = "O2 for steeping (min/hr): ", width = int(0.017*w), height = int(0.002*h), font = ('Helvetica',int(fontSize*0.7)), anchor = "nw")
+    gs_steep_o2_entryLabel = tk.Label(fg = "black", bg = "white", text = "O2 for steeping (%): ", width = int(0.017*w), height = int(0.002*h), font = ('Helvetica',int(fontSize*0.7)), anchor = "nw")
     gs_steep_o2_entryLabel.place(x =0.35*w, y = 0.6*h)
     gs_steep_o2_entry = tk.Entry(window, textvariable = gs_steep_o2_tmp, width = int(0.007*w), font = ('Helvetica',int(fontSize*0.7)))
     gs_steep_o2_entry.place(x =0.58*w, y = 0.6*h)
@@ -316,7 +316,7 @@ def addJobPage():
     gs_germ_tumble_entry.place(x =0.58*w, y = 0.75*h)
 
     ##O2 for Germination
-    gs_germ_o2_entryLabel = tk.Label(fg = "black", bg = "white", text = "O2 for germ. (min/hr): ", width = int(0.015*w), height = int(0.002*h), font = ('Helvetica',int(fontSize*0.7)), anchor = "nw")
+    gs_germ_o2_entryLabel = tk.Label(fg = "black", bg = "white", text = "O2 for germ. (%): ", width = int(0.015*w), height = int(0.002*h), font = ('Helvetica',int(fontSize*0.7)), anchor = "nw")
     gs_germ_o2_entryLabel.place(x =0.35*w, y = 0.8*h)
     gs_germ_o2_entry = tk.Entry(window, textvariable = gs_germ_o2_tmp, width = int(0.007*w), font = ('Helvetica',int(fontSize*0.7)))
     gs_germ_o2_entry.place(x =0.58*w, y = 0.8*h)
@@ -342,7 +342,7 @@ def addJobPage():
     kn_tumbles_entry.place(x =0.86*w, y = 0.3*h)
 
     ##Fan speed
-    kn_fan_speed_entryLabel = tk.Label(fg = "black", bg = "white", text = "Fan speed (0-20): ", width = int(0.015*w), height = int(0.002*h), font = ('Helvetica',int(fontSize*0.7)), anchor = "nw")
+    kn_fan_speed_entryLabel = tk.Label(fg = "black", bg = "white", text = "Fan speed (0-255): ", width = int(0.015*w), height = int(0.002*h), font = ('Helvetica',int(fontSize*0.7)), anchor = "nw")
     kn_fan_speed_entryLabel.place(x =0.66*w, y = 0.35*h)
     kn_fan_speed_entry = tk.Entry(window, textvariable = kn_fan_speed_tmp, width = int(0.007*w), font = ('Helvetica',int(fontSize*0.7)))
     kn_fan_speed_entry.place(x =0.86*w, y = 0.35*h)
@@ -884,8 +884,8 @@ arduino = serial.Serial()
 
 #Exits program upon clicking Exit button
 def Exitf():
-    arduino.write(b'0')
-    arduino.close()
+    #arduino.write(b'0')
+    #arduino.close()
     os._exit(0)
     quit()
 
@@ -912,13 +912,24 @@ def updatePlots():
     pass
 
 def updateMonitor():
+    global wash_sequence, steep_sequence, germ_sequence, kiln_sequence, combox_General_home
+    if(wash_sequence):
+        combox_General_home.configure(text="Washing Grain")
+    elif(steep_sequence):
+        combox_General_home.configure(text="Steeping Grain")
+    elif(germ_sequence):
+        combox_General_home.configure(text="Germinating Grain")
+    elif(kiln_sequence):
+        combox_General_home.configure(text="Drying Grain")
+    else:
+        combox_General_home.configure(text="System Ready")
     pass
 
 def buildMessage():
     global updateArduino
     if(updateArduino):
         message = f"{k_heating},{k_fan},{k_motor},{gs_motor},{k_flap},{gate_valve},{g_jogger},{o2_valve},{filling},{misting},{draining},{filtering}\n"
-        arduino.write(message.encode("utf-8"))
+        #arduino.write(message.encode("utf-8"))
         print(message.encode("utf-8"))
         updateArduino = False
 
@@ -1030,7 +1041,7 @@ def stateManagement():
                             last_mix = timenow()
                             updateArduino = True
                             print(f"mixing {timenow()}")
-                    if(current_job.wash_time*10 <= (timenow()-first_mix_time)):
+                    if(current_job.wash_time*1 <= (timenow()-first_mix_time)):
                         #oh the pain of non-blocking code
                         draining = 1
                         gs_motor = 1
@@ -1057,7 +1068,6 @@ def stateManagement():
                 wash_sequence = False
                 steep_sequence = True
                 steep_1 = True
-                gs_busy = False
                 entry_flagged = False
 
         #start steep sequence
@@ -1116,7 +1126,7 @@ def stateManagement():
                     print(f"mixing {timenow()}")
 
                 ##ending statement
-                if(current_job.steep_time*3*1 <= timenow() - steep_start_time):
+                if(current_job.steep_time*1*1 <= timenow() - steep_start_time):
                     steeping = False
                     entry_flagged = True
                     o2_valve = 0
@@ -1162,10 +1172,10 @@ def stateManagement():
                 germ_1 = False
                 germ_2 = True
                 print(f"start germinating {timenow()}")
-                print(f"{o2_interval}")
-                print(f"{o2_duration}")
-                print(f"{mist_interval}")
-                print(f"{mist_duration}")
+                #print(f"{o2_interval}")
+                #print(f"{o2_duration}")
+                #print(f"{mist_interval}")
+                #print(f"{mist_duration}")
 
             if(germ_2):
                 ##periodically releasing o2
@@ -1205,7 +1215,7 @@ def stateManagement():
                     print(f"mixing {timenow()}")
 
                 ##ending statement
-                if(current_job.germ_time*3*1 <= timenow() - steep_start_time):
+                if(current_job.germ_time*1*1 <= timenow() - steep_start_time):
                     o2_valve = 0
                     gs_motor = 1
                     drain_start = timenow() 
@@ -1224,7 +1234,6 @@ def stateManagement():
                     germ_3 = False
                     germ_sequence = False
                     gj_sequence = True
-
                     print(f"done germing {timenow()}")
                     
         #transport grain for (2 minutes?)
@@ -1263,6 +1272,7 @@ def stateManagement():
             if(kiln_1):
                 kiln_start_time = timenow()
                 last_mix = timenow()
+                gs_busy = False
                 k_fan = current_job.kiln_fan
                 k_heating = 1
                 kiln_1 = False 
@@ -1284,7 +1294,7 @@ def stateManagement():
                     print(f"mixing off {timenow()}")
 
                 #exit code: push grain out
-                if(current_job.kiln_time*10 <= timenow()-kiln_start_time):
+                if(current_job.kiln_time*1 <= timenow()-kiln_start_time):
                     last_mix = timenow()
                     k_fan = 0
                     k_heating = 0
@@ -1322,14 +1332,14 @@ def main():
     buildMessage()
 
     #reading messages from arduino if they're in line, updating variables
-    getMessage()
+    #getMessage()
 
     #state_management
     stateManagement()
 
 homePage()
-openArduino() #Opens the arduino
-serialString = arduino.readline() #prevents crash from left over bits in bus
+#openArduino() #Opens the arduino
+#serialString = arduino.readline() #prevents crash from left over bits in bus
 while True:
     main() #main loop
     #print(updateArduino)
