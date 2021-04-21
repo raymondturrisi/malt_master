@@ -41,7 +41,7 @@ int distance; // variable for the distance measurement
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("Program loading..");
+  //Serial.println("Program loading..");
   //create variables, set pin modes, etc..
   pinMode(gj_Pin,OUTPUT);
   pinMode(kFan_Pin,OUTPUT);
@@ -64,12 +64,12 @@ void setup() {
   pinMode(echoPin, INPUT); // Sets the echoPin as an INPUT
   
   //If there is something waiting in the serial bus, parse it, else proceed
-  Serial.println("kiln heater (0 or 1), kiln fan (0, or 128-255), kiln motor (0 or 1), gs motor (0 or 1), kiln flap (0 or 1), gate valve (0 or 1), germ jogger (0, or 200-255), o2 valve (0 or 1), flood valve (0 or 1), mister (0 or 1), drain (0 or 1)");
+  //Serial.println("kiln heater (0 or 1), kiln fan (0, or 128-255), kiln motor (0 or 1), gs motor (0 or 1), kiln flap (0 or 1), gate valve (0 or 1), germ jogger (0, or 200-255), o2 valve (0 or 1), flood valve (0 or 1), mister (0 or 1), drain (0 or 1)");
   
   dht.begin();
   delay(5000);
-  Serial.println("Program set..");
-  Serial.println("temp, hum");
+  //Serial.println("Program set..");
+  //Serial.println("temp, hum");
 }
 
 unsigned long int kiln_th_time = 0;
@@ -102,6 +102,7 @@ int mist = 0;
 int filter = 0;
 int gj_motor = 0;
 int drain = 0;
+int err_code = 0;
 
 float k_temp = 0.00;
 float k_hum = 0.00;
@@ -121,9 +122,9 @@ void loop() {
       tempstr = buff.substring(0,i);
       states[k] = tempstr.toInt();
       buff.remove(0,i+1);
-      Serial.print(k+1);
-      Serial.print(": ");
-      Serial.println(states[k]);
+      //Serial.print(k+1);
+      //Serial.print(": ");
+      //Serial.println(states[k]);
     }
     /*
       arduino parser 
@@ -167,7 +168,7 @@ void loop() {
   //Serial.println(allStates);
   delay(500);
   get_kiln_th(k_temp, k_hum);
-  String message = String(millis()) + ", " + String(k_temp) + ", " + String(k_hum) + ", " + String(us_sensor()) + ", " + String(getTemp()) +"\n";
+  String message = String(err_code) + ", " + String(millis()) + ", " + String(k_temp) + ", " + String(k_hum) + ", " + String(us_sensor()) + ", " + String(getTemp()) +"\n";
   Serial.print(message);
 }
 
@@ -213,7 +214,9 @@ void get_kiln_th(float &kiln_temp, float &kiln_humidity) {
     
     // Check if any reads failed and exit early (to try again).
     if (isnan(kiln_humidity) || isnan(t) || isnan(kiln_temp)) {
-      Serial.println(F("Failed to read from DHT sensor!"));
+      kiln_humidity = 999;
+      kiln_temp = 999;
+      //Serial.println(F("Failed to read from DHT sensor!"));
       return;
     }
     //Serial.println(kiln_humidity);

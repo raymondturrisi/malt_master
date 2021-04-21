@@ -342,7 +342,7 @@ def addJobPage():
     kn_tumbles_entry.place(x =0.86*w, y = 0.3*h)
 
     ##Fan speed
-    kn_fan_speed_entryLabel = tk.Label(fg = "black", bg = "white", text = "Fan speed (0-20): ", width = int(0.015*w), height = int(0.002*h), font = ('Helvetica',int(fontSize*0.7)), anchor = "nw")
+    kn_fan_speed_entryLabel = tk.Label(fg = "black", bg = "white", text = "Fan speed (0-255): ", width = int(0.015*w), height = int(0.002*h), font = ('Helvetica',int(fontSize*0.7)), anchor = "nw")
     kn_fan_speed_entryLabel.place(x =0.66*w, y = 0.35*h)
     kn_fan_speed_entry = tk.Entry(window, textvariable = kn_fan_speed_tmp, width = int(0.007*w), font = ('Helvetica',int(fontSize*0.7)))
     kn_fan_speed_entry.place(x =0.86*w, y = 0.35*h)
@@ -380,7 +380,7 @@ def addJobPage():
     rc_frq_entry.delete(0,'end')
 
 
-    def buildJob(self):
+    def buildJob():
         global queue, combox_General_home, gs_busy
         try:
             if(not(gs_busy)):
@@ -423,7 +423,6 @@ def addJobPage():
     #Exit button binded too escape key (on some computers)
     buildJob_Button = tk.Button(window, text = "Start Job", command = buildJob, font = ('Helvetica',fontSize))
     buildJob_Button.place(x=0.05*w,y=0.85*h)
-    buildJob_Button.bind('<Enter>', buildJob)
 
 def goAddJob():
     global pageNum, window
@@ -530,7 +529,7 @@ def manControlPage():
     global fill_button, gate_button, mist_button, drain_button
     global k_heating, k_fan, k_motor
     global gs_motor, k_flap, gate_valve, g_jogger
-    global o2_valve, filling, misting, draining
+    global o2_valve, filling, misting, draining, filtering
 
 
     page = tk.Frame(window)
@@ -913,6 +912,17 @@ def updatePlots():
     pass
 
 def updateMonitor():
+    global wash_sequence, steep_sequence, germ_sequence, kiln_sequence, combox_General_home
+    if(wash_sequence):
+        combox_General_home.configure(text="Washing Grain")
+    elif(steep_sequence):
+        combox_General_home.configure(text="Steeping Grain")
+    elif(germ_sequence):
+        combox_General_home.configure(text="Germinating Grain")
+    elif(kiln_sequence):
+        combox_General_home.configure(text="Drying Grain")
+    else:
+        combox_General_home.configure(text="System Ready")
     pass
 
 def buildMessage():
@@ -943,7 +953,7 @@ def getMessage():
     while(arduino.in_waiting > 0):
         serialString = arduino.readline()
         serialString = serialString.decode('Ascii')
-        print(serialString)
+        #print(serialString)
         #parsed_string = serialString.split(",")
         #m_type = int(parsed_string[0])
         #k_temp_now = float(parsed_string[1])
@@ -975,10 +985,14 @@ def stateManagement():
     global kiln_1, kiln_2, kiln_3
     global gj_1, gj_2, gj_start_time
     global gs_busy, wash_sequence, steep_sequence, germ_sequence
-    global gs_start_time, fill_start_time, first_mix_time, last_mix, drain_start, next_o2_release
-    global filling, updateArduino, gs_wl_now, gs_motor, draining, filtering, o2_valve, k_motor, k_fan
+    global gs_start_time, fill_start_time, first_mix_time, kiln_start_time, last_mix, drain_start, next_o2_release
+    global updateArduino, gs_wl_now
     global gj_sequence, kiln_sequence, entry_flagged, first_mix, gs_mixing
     global o2_interval, o2_duration, next_o2_release, o2_opened_at
+
+    global k_heating, k_fan, k_motor
+    global gs_motor, k_flap, gate_valve, g_jogger
+    global o2_valve, filling, misting, draining, filtering
     #if not purging, system is doing nothing, or processing job (mode == 1)
         #if a job is received, start process, gs is busy
     if(mode == 0):
@@ -1027,7 +1041,7 @@ def stateManagement():
                             last_mix = timenow()
                             updateArduino = True
                             print(f"mixing {timenow()}")
-                    if(current_job.wash_time*10 <= (timenow()-first_mix_time)):
+                    if(current_job.wash_time*1 <= (timenow()-first_mix_time)):
                         #oh the pain of non-blocking code
                         draining = 1
                         gs_motor = 1
@@ -1054,7 +1068,6 @@ def stateManagement():
                 wash_sequence = False
                 steep_sequence = True
                 steep_1 = True
-                gs_busy = False
                 entry_flagged = False
 
         #start steep sequence
@@ -1113,7 +1126,7 @@ def stateManagement():
                     print(f"mixing {timenow()}")
 
                 ##ending statement
-                if(current_job.steep_time*3*1 <= timenow() - steep_start_time):
+                if(current_job.steep_time*1*1 <= timenow() - steep_start_time):
                     steeping = False
                     entry_flagged = True
                     o2_valve = 0
@@ -1152,17 +1165,17 @@ def stateManagement():
                 o2_interval = current_job.germ_time*(current_job.germ_o2/100)
                 o2_duration = o2_interval*current_job.germ_o2/100
                 next_mist_release = timenow()
-                mist_interval = current_job.germ_time*(current_job.germ_o2/100)
+                mist_interval = current_job.germ_time*(current_job.germ_mist/100)
                 mist_duration = mist_interval*current_job.germ_mist/100
 
                 entry_flagged = False
                 germ_1 = False
                 germ_2 = True
                 print(f"start germinating {timenow()}")
-                print(f"{o2_interval}")
-                print(f"{o2_duration}")
-                print(f"{mist_interval}")
-                print(f"{mist_duration}")
+                #print(f"{o2_interval}")
+                #print(f"{o2_duration}")
+                #print(f"{mist_interval}")
+                #print(f"{mist_duration}")
 
             if(germ_2):
                 ##periodically releasing o2
@@ -1202,7 +1215,7 @@ def stateManagement():
                     print(f"mixing {timenow()}")
 
                 ##ending statement
-                if(current_job.germ_time*3*1 <= timenow() - steep_start_time):
+                if(current_job.germ_time*1*1 <= timenow() - steep_start_time):
                     o2_valve = 0
                     gs_motor = 1
                     drain_start = timenow() 
@@ -1221,7 +1234,6 @@ def stateManagement():
                     germ_3 = False
                     germ_sequence = False
                     gj_sequence = True
-
                     print(f"done germing {timenow()}")
                     
         #transport grain for (2 minutes?)
@@ -1255,47 +1267,52 @@ def stateManagement():
             #kilns for n time, with heating element on when temperature is not at desired temperature, with fan at set fan speed
                 #heater turns off if temperature is not met within 30 minutes, defaulting to 100 degrees and 40 pwm fan speed
             #finish kilning
-            if(kiln_sequence):
-                #throw heaters
-                if(kiln_1):
-                    kiln_start_time = timenow()
+        if(kiln_sequence):
+            #throw heaters
+            if(kiln_1):
+                kiln_start_time = timenow()
+                last_mix = timenow()
+                gs_busy = False
+                k_fan = current_job.kiln_fan
+                k_heating = 1
+                kiln_1 = False 
+                kiln_2 = True
+                updateArduino = True 
+                print(f"starting kiln process {timenow()}")
+            #mix periodically
+            if(kiln_2):
+                if(k_motor == 0 and timenow() >= last_mix + 4):
                     last_mix = timenow()
-                    k_fan = current_job.kiln_fan
-                    k_heating = 1
-                    kiln_1 = False 
-                    kiln_2 = True
-                    updateArduino = True 
-                    print(f"starting kiln process {timenow()}")
-                #mix periodically
-                if(kiln_2):
-                    if(timenow() >= last_mix + 10):
-                        last_mix = timenow()
-                        k_motor = 1
-                        updateArduino = True
-                    if(k_motor == 1 and timenow() >= last_mix+5):
-                        last_mix = timenow()
-                        k_motor = 0
-                        updateArduino = True
-                    #exit code: push grain out
-                    if(current_job.kiln_time <= timenow()-kiln_start_time):
-                        last_mix = timenow()
-                        k_fan = 0
-                        k_heating = 0
-                        k_motor = 1
-                        k_flap = 1
-                        updateArduino = True
-                        kiln_2 = False 
-                        kiln_3 = True
-                        print(f"finished kilning {timenow()}")
-                #once grain is assumed to have been gone, clode kiln and reset
-                if(kiln_3):
-                    if(timenow() >= last_mix + 10):
-                        k_motor = 0
-                        k_flap = 0
-                        updateArduino = True
-                        kiln_3 = False
-                        kiln_sequence = False
-                        print(f"kiln reset {timenow()}")
+                    k_motor = 1
+                    updateArduino = True
+                    print(f"mixing on {timenow()}")
+
+                if(k_motor == 1 and timenow() >= last_mix + 4):
+                    last_mix = timenow()
+                    k_motor = 0
+                    updateArduino = True
+                    print(f"mixing off {timenow()}")
+
+                #exit code: push grain out
+                if(current_job.kiln_time*1 <= timenow()-kiln_start_time):
+                    last_mix = timenow()
+                    k_fan = 0
+                    k_heating = 0
+                    k_motor = 1
+                    k_flap = 1
+                    updateArduino = True
+                    kiln_2 = False 
+                    kiln_3 = True
+                    print(f"finished kilning {timenow()}")
+            #once grain is assumed to have been gone, clode kiln and reset
+            if(kiln_3):
+                if(timenow() >= last_mix + 10):
+                    k_motor = 0
+                    k_flap = 0
+                    updateArduino = True
+                    kiln_3 = False
+                    kiln_sequence = False
+                    print(f"kiln reset {timenow()}")
 
     #if purging, purge
         pass
@@ -1305,8 +1322,8 @@ def stateManagement():
     pass
 
 def main():
-    global queue
-    
+    global queue, kiln_1, kiln_2, kiln_3, kiln_sequence, last_mix
+    #print(f"kiln states {kiln_1} {kiln_2} {kiln_3} {kiln_sequence} {timenow()} {last_mix}")
     #updating plots
     updatePlots()
     updateMonitor()
