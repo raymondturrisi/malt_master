@@ -107,7 +107,7 @@ float k_temp = 0.00;
 float k_hum = 0.00;
 
 String allStates = "";
-
+int error_code
 String buff, tempstr;
 void loop() {
   //Serial.println("waiting..");

@@ -292,7 +292,7 @@ def addJobPage():
     gs_steep_water_entry.place(x =0.58*w, y = 0.55*h)
 
     ##O2 for steeping
-    gs_steep_o2_entryLabel = tk.Label(fg = "black", bg = "white", text = "O2 for steeping (min/hr): ", width = int(0.017*w), height = int(0.002*h), font = ('Helvetica',int(fontSize*0.7)), anchor = "nw")
+    gs_steep_o2_entryLabel = tk.Label(fg = "black", bg = "white", text = "O2 for steeping (%): ", width = int(0.017*w), height = int(0.002*h), font = ('Helvetica',int(fontSize*0.7)), anchor = "nw")
     gs_steep_o2_entryLabel.place(x =0.35*w, y = 0.6*h)
     gs_steep_o2_entry = tk.Entry(window, textvariable = gs_steep_o2_tmp, width = int(0.007*w), font = ('Helvetica',int(fontSize*0.7)))
     gs_steep_o2_entry.place(x =0.58*w, y = 0.6*h)
@@ -316,7 +316,7 @@ def addJobPage():
     gs_germ_tumble_entry.place(x =0.58*w, y = 0.75*h)
 
     ##O2 for Germination
-    gs_germ_o2_entryLabel = tk.Label(fg = "black", bg = "white", text = "O2 for germ. (min/hr): ", width = int(0.015*w), height = int(0.002*h), font = ('Helvetica',int(fontSize*0.7)), anchor = "nw")
+    gs_germ_o2_entryLabel = tk.Label(fg = "black", bg = "white", text = "O2 for germ. (%): ", width = int(0.015*w), height = int(0.002*h), font = ('Helvetica',int(fontSize*0.7)), anchor = "nw")
     gs_germ_o2_entryLabel.place(x =0.35*w, y = 0.8*h)
     gs_germ_o2_entry = tk.Entry(window, textvariable = gs_germ_o2_tmp, width = int(0.007*w), font = ('Helvetica',int(fontSize*0.7)))
     gs_germ_o2_entry.place(x =0.58*w, y = 0.8*h)
