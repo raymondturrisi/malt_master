@@ -1,7 +1,8 @@
 ############################################
 ############   Description   ###############
 ############################################
-
+#This is the code for the User Interface for the Malt Master Prototype for
+#URI Mechanical Engineering Capstone Team 20H, written by Raymond Turrisi.
 
 
 ############################################
