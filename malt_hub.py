@@ -396,7 +396,7 @@ def addJobPage():
             print("There is a problem with one of your inputs, everything must be whole integers")
             pass
         else:
-            print("There is an unaccounted for problem, goodluck..")
+            #print("There is an unaccounted for problem, goodluck..")
             pass
 
         name_entry.delete(0,'end')
@@ -1185,9 +1185,9 @@ def stateManagement():
                     o2_valve = 1
                     next_o2_release = next_o2_release+o2_interval
                     updateArduino = True
-                    print(f"opened {timenow()}")
+                    print(f"o2 opened {timenow()}")
                 if(o2_opened_at + o2_duration <= timenow() and o2_valve == 1):
-                    print(f"closed {timenow()}")
+                    print(f"o2 closed {timenow()}")
                     o2_valve = 0
                     updateArduino = True
 
@@ -1197,9 +1197,9 @@ def stateManagement():
                     o2_valve = 1
                     next_o2_release = next_o2_release+o2_interval
                     updateArduino = True
-                    print(f"opened {timenow()}")
+                    print(f"mister opened {timenow()}")
                 if(o2_opened_at + o2_duration <= timenow() and o2_valve == 1):
-                    print(f"closed {timenow()}")
+                    print(f"mister closed {timenow()}")
                     o2_valve = 0
                     updateArduino = True
 
@@ -1227,7 +1227,7 @@ def stateManagement():
 
             if(germ_3):
                 #done germing
-                if(timenow() >= last_mix + 20):
+                if(timenow() >= last_mix + 5):
                     gs_motor = 0
                     updateArduino = True
                     gj_1 = True
@@ -1252,7 +1252,7 @@ def stateManagement():
                 print(f"beginning grain transport {timenow()}")
             if(gj_2):
                 #transport the grain while spinning the kiln motor
-                if(timenow() >= gj_start_time + 10):
+                if(timenow() >= gj_start_time + 5):
                     g_jogger = 0
                     gate_valve = 0
                     gs_motor = 0
@@ -1306,7 +1306,7 @@ def stateManagement():
                     print(f"finished kilning {timenow()}")
             #once grain is assumed to have been gone, clode kiln and reset
             if(kiln_3):
-                if(timenow() >= last_mix + 10):
+                if(timenow() >= last_mix + 5):
                     k_motor = 0
                     k_flap = 0
                     updateArduino = True
